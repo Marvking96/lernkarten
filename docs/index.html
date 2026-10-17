@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lernkarten</title>
+<meta name="theme-color" content="#1f3a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lernkarten">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --bg:#f4f1ea; --surface:#fffdf8; --ink:#1d2433; --muted:#6b7280; --line:#e4dfd3;
+  --primary:#1f3a5f; --primary-ink:#ffffff; --accent:#c9822b;
+  --ok:#2f7d4f; --ok-bg:#e3f2e8; --bad:#b4413a; --bad-bg:#f8e4e2;
+  --card-shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(31,58,95,.10);
+  --radius:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14171d; --surface:#1d222b; --ink:#e8e6e1; --muted:#9aa1ad; --line:#2d3440;
+    --primary:#8db4e2; --primary-ink:#0f1520; --accent:#e0a35a;
+    --ok:#6cc08f; --ok-bg:#1d3326; --bad:#ec8a82; --bad-bg:#3a2321;
+    --card-shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink)}
+body{font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  min-height:100vh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:640px;margin:0 auto;padding:16px 16px 40px}
+header.bar{display:flex;align-items:center;gap:8px;margin:4px 0 16px}
+header.bar h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
+header.bar h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
+.iconbtn{border:0;background:transparent;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.iconbtn:active{background:var(--line)}
+.iconbtn svg{width:24px;height:24px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border-radius:14px;border:1px solid var(--line);
+  background:var(--surface);cursor:pointer;font-weight:600;padding:12px 16px;text-align:center}
+.btn:active{transform:scale(.99)}
+.btn.primary{background:var(--primary);color:var(--primary-ink);border-color:transparent}
+.btn.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.btn.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.btn.ghost{background:transparent}
+.btn.small{min-height:40px;font-size:14px;padding:8px 12px;width:auto}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.stack>*+*{margin-top:10px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center}
+.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.menu{list-style:none;margin:16px 0 0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.menu li+li{border-top:1px solid var(--line)}
+.menu button{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;border:0;background:transparent;text-align:left;cursor:pointer;min-height:52px}
+.menu button:active{background:var(--line)}
+.menu svg{width:22px;height:22px;color:var(--primary);flex:none}
+.menu .sub{display:block;font-size:13px;color:var(--muted)}
+.muted{color:var(--muted)}
+.hint{font-size:14px;color:var(--muted)}
+h2{font-size:17px;margin:20px 0 8px}
+/* Auswahlbaum */
+.tree{list-style:none;margin:0;padding:0}
+.tree .k{border:1px solid var(--line);background:var(--surface);border-radius:14px;margin-bottom:8px;overflow:hidden}
+.tree .khead{display:flex;align-items:center;gap:6px;padding:4px 8px 4px 4px}
+.tree .khead label{flex:1}
+.tree .unter{list-style:none;margin:0;padding:0 0 6px 0;border-top:1px solid var(--line)}
+.tree .unter[hidden]{display:none}
+.chk{display:flex;align-items:center;gap:12px;padding:10px 8px;cursor:pointer;min-height:48px}
+.chk input{width:22px;height:22px;accent-color:var(--primary);flex:none}
+.chk .t{flex:1}
+.chk .n{font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.unter .chk{padding-left:22px}
+.skripthead{font-weight:700;margin:16px 0 8px}
+.seg{display:flex;background:var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:10px;padding:10px 6px;font-size:14px;cursor:pointer;min-height:44px}
+.seg button.on{background:var(--surface);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.sticky-bottom{position:sticky;bottom:0;padding:12px 0 calc(8px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 75%,transparent)}
+/* Lernkarte */
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:24px}
+.tag{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.tag.fall{background:var(--accent);color:#fff;border-color:transparent}
+.tag.eigen{background:var(--primary);color:var(--primary-ink);border-color:transparent}
+.tag.edit{border-style:dashed}
+.scene{perspective:1200px;margin-bottom:14px}
+.flip{position:relative;min-height:min(56vh,460px);transition:transform .45s cubic-bezier(.2,.7,.2,1);transform-style:preserve-3d;cursor:pointer}
+.flip.turned{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--surface);border:1px solid var(--line);
+  border-radius:20px;box-shadow:var(--card-shadow);padding:22px 20px;display:flex;flex-direction:column;overflow:auto}
+.face.back{transform:rotateY(180deg)}
+.face .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
+.face .q{font-size:21px;line-height:1.4;font-weight:600;margin:auto 0;white-space:pre-line}
+.face .qsmall{font-size:14px;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px;white-space:pre-line}
+.face .a{font-size:17px;line-height:1.55;white-space:pre-line}
+.face .tap{font-size:13px;color:var(--muted);text-align:center;margin-top:16px}
+@media (prefers-reduced-motion: reduce){.flip{transition:none}}
+/* Liste */
+.search{width:100%;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:10px 14px}
+select.field,input.field,textarea.field{width:100%;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:12px 14px;min-height:48px}
+textarea.field{min-height:120px;resize:vertical;line-height:1.45}
+label.f{display:block;font-size:14px;font-weight:600;margin:14px 0 6px}
+.list{list-style:none;margin:12px 0 0;padding:0}
+.list li{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.list button{width:100%;text-align:left;border:0;background:transparent;padding:12px 14px;cursor:pointer}
+.list .meta{font-size:12px;color:var(--muted);margin-top:4px}
+.list li.hidden{opacity:.5}
+.empty{text-align:center;padding:30px 10px;color:var(--muted)}
+/* Dialog */
+.overlay{position:fixed;inset:0;background:rgba(10,14,22,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.overlay[hidden]{display:none}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet h3{margin:4px 0 4px;font-size:18px}
+@media (min-width:700px){.overlay{align-items:center}.sheet{border-radius:20px}}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:12px;font-size:14px;z-index:60;max-width:90vw;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.result{text-align:center;padding:20px 0}
+.result .big{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums}
+.bars{margin-top:8px}
+.barrow{display:flex;align-items:center;gap:10px;font-size:14px;padding:6px 0}
+.barrow .bt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barrow .bb{width:38%;height:8px;background:var(--line);border-radius:4px;overflow:hidden;flex:none}
+.barrow .bb i{display:block;height:100%;background:var(--ok)}
+.barrow .bn{width:44px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.welcome{padding:24px 18px}
+.welcome ol{padding-left:20px}
+.welcome li{margin-bottom:6px}
+.danger{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<div class="overlay" id="overlay" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="fileInput" hidden>
+
+<script>
+'use strict';
+/* ============ Speicher ============ */
+const KEY_DATEN='lk_daten_v1', KEY_FORT='lk_fortschritt_v1', KEY_EINST='lk_einstellungen_v1';
+const EIGEN_SKRIPT='eigene';
+function laden(key, fallback){ try{ const s=localStorage.getItem(key); return s?JSON.parse(s):fallback; }catch(e){ return fallback; } }
+function speichern(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); return true; }catch(e){ toast('Speichern fehlgeschlagen – Speicher voll?'); return false; } }
+
+let daten = laden(KEY_DATEN, {skripte:[], karten:{}});
+let fort  = laden(KEY_FORT, {});
+let einst = laden(KEY_EINST, {auswahl:null, modus:'alle', anzahl:20});
+function saveDaten(){ speichern(KEY_DATEN, daten); }
+function saveFort(){ speichern(KEY_FORT, fort); }
+function saveEinst(){ speichern(KEY_EINST, einst); }
+
+/* ============ Hilfen ============ */
+const $ = s => document.querySelector(s);
+function el(tag, attrs, ...kids){
+  const e=document.createElement(tag);
+  if(attrs) for(const [k,v] of Object.entries(attrs)){
+    if(v==null || v===false) continue;
+    if(k==='class') e.className=v;
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if(k==='html') e.innerHTML=v; // nur für eigene, feste Icons
+    else if(v===true) e.setAttribute(k,'');
+    else e.setAttribute(k,v);
+  }
+  for(const kid of kids.flat()){ if(kid==null||kid===false) continue; e.append(kid.nodeType?kid:document.createTextNode(String(kid))); }
+  return e;
+}
+const ICON = {
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>',
+  shuffle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>',
+  target:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20V3H6.5A2.5 2.5 0 004 5.5z"/><path d="M4 19.5V21h16"/></svg>'
+};
+// append() ohne leere Einträge (null/false würden sonst als Text erscheinen)
+function sauber(node){ return {append:(...k)=>node.append(...k.flat().filter(x=>x!=null&&x!==false)), replaceChildren:()=>node.replaceChildren()}; }
+function icon(name){ return el('span',{html:ICON[name], style:'display:grid;place-items:center'}); }
+let toastTimer;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function alleKarten(inklVersteckt){ return Object.values(daten.karten).filter(k=>inklVersteckt||!k.versteckt); }
+function fp(id){ return fort[id] || null; }
+function istSchwach(id){ const f=fp(id); return !!f && f.box<=1 && f.falsch>0; }
+function istSicher(id){ const f=fp(id); return !!f && f.box>=3; }
+function findeSkript(id){ return daten.skripte.find(s=>s.id===id); }
+function findeKapitel(sid,kid){ const s=findeSkript(sid); return s && s.kapitel.find(k=>k.id===kid); }
+function findeUnter(sid,kid,uid){ const k=findeKapitel(sid,kid); return k && k.unter.find(u=>u.id===uid); }
+function ortText(k){
+  const u=findeUnter(k.skript,k.kapitel,k.unter), kap=findeKapitel(k.skript,k.kapitel);
+  return [kap?kap.titel.replace(/^([A-Z])\.\s*/,'$1 · '):'', u?u.titel:''].filter(Boolean).join(' – ');
+}
+function unterSchluessel(k){ return k.skript+'|'+k.kapitel+'|'+k.unter; }
+
+/* ============ Navigation ============ */
+let ansicht='start', session=null, liste={suche:'', filter:'', versteckte:false};
+function zeige(name){ ansicht=name; render(); window.scrollTo(0,0); }
+window.addEventListener('popstate',()=>{
+  // Zurück-Taste (Android): offenen Dialog schließen, Seite bleibt
+  if(!$('#overlay').hidden){ $('#overlay').hidden=true; history.pushState({a:ansicht},''); return; }
+  if(ansicht!=='start'){ ansicht='start'; render(); window.scrollTo(0,0); }
+});
+function gehe(name){ history.pushState({a:name},''); zeige(name); }
+
+function render(){
+  const app=sauber($('#app')); app.replaceChildren();
+  if(!daten.skripte.length && ansicht!=='daten' && ansicht!=='neu') ansicht='willkommen';
+  ({willkommen:renderWillkommen,start:renderStart,auswahl:renderAuswahl,lernen:renderLernen,ergebnis:renderErgebnis,liste:renderListe,daten:renderDaten,statistik:renderStatistik}[ansicht]||renderStart)(app);
+}
+function kopf(titel, unter, links, rechts){
+  return el('header',{class:'bar'},
+    links||null,
+    el('h1',null,titel, unter?el('small',null,unter):null),
+    rechts||null);
+}
+function zurueckBtn(){ return el('button',{class:'iconbtn','aria-label':'Zurück',onclick:()=>history.back()},icon('back')); }
+
+/* ============ Willkommen ============ */
+function renderWillkommen(app){
+  app.append(kopf('Lernkarten'),
+    el('div',{class:'panel welcome stack'},
+      el('p',{style:'margin-top:0;font-size:18px;font-weight:600'},'Willkommen!'),
+      el('p',null,'Noch sind keine Karten auf diesem Gerät. So geht es los:'),
+      el('ol',null,
+        el('li',null,'Die Kartendatei (z. B. ', el('b',null,'karten_GB1-1.json'),') auf dem Handy speichern, etwa aus WhatsApp oder einer E-Mail.'),
+        el('li',null,'Unten auf „Kartendatei importieren“ tippen und die Datei auswählen.'),
+        el('li',null,'Fertig – die Karten bleiben auf diesem Gerät gespeichert und funktionieren auch offline.')),
+      el('button',{class:'btn primary',onclick:()=>dateiWaehlen()},'Kartendatei importieren'),
+      el('button',{class:'btn ghost',onclick:()=>{ starteNeueKarte(null); }},'Ohne Datei starten und eigene Karten anlegen')
+    ));
+}
+
+/* ============ Start ============ */
+function renderStart(app){
+  const karten=alleKarten();
+  const gesehen=karten.filter(k=>fp(k.id)).length, sicher=karten.filter(k=>istSicher(k.id)).length, schwach=karten.filter(k=>istSchwach(k.id)).length;
+  app.append(
+    kopf('Lernkarten', daten.skripte.map(s=>s.titel).join(' · ')),
+    el('div',{class:'stats'},
+      el('div',{class:'stat'},el('b',null,karten.length),el('span',null,'Karten')),
+      el('div',{class:'stat'},el('b',null,gesehen),el('span',null,'schon geübt')),
+      el('div',{class:'stat'},el('b',null,sicher),el('span',null,'sitzen sicher'))),
+    el('div',{class:'stack'},
+      el('button',{class:'btn primary',onclick:()=>starteSession(karten.map(k=>k.id),'alle',einst.anzahl,'Zufall querbeet')},icon('shuffle'),'Zufall querbeet'),
+      el('button',{class:'btn',onclick:()=>gehe('auswahl')},icon('book'),'Skripte & Kapitel auswählen'),
+      el('button',{class:'btn',disabled:schwach===0,onclick:()=>starteSession(karten.filter(k=>istSchwach(k.id)).map(k=>k.id),'schwach',0,'Schwachstellen')},icon('target'),
+        schwach?`Schwachstellen üben (${schwach})`:'Schwachstellen üben – noch keine')
+    ),
+    el('ul',{class:'menu'},
+      el('li',null,el('button',{onclick:()=>{ liste.suche=''; gehe('liste'); }},icon('list'),el('span',null,'Alle Karten ansehen & bearbeiten',el('span',{class:'sub'},'Suchen, korrigieren, ausblenden')))),
+      el('li',null,el('button',{onclick:()=>starteNeueKarte(null)},icon('plus'),el('span',null,'Neue Karte anlegen',el('span',{class:'sub'},'Eigene Frage und Antwort hinzufügen')))),
+      el('li',null,el('button',{onclick:()=>gehe('statistik')},icon('target'),el('span',null,'Lernstand',el('span',{class:'sub'},'Wie gut sitzen die Kapitel?')))),
+      el('li',null,el('button',{onclick:()=>gehe('daten')},icon('gear'),el('span',null,'Daten & Sicherung',el('span',{class:'sub'},'Karten importieren, sichern, übertragen'))))
+    ),
+    el('p',{class:'hint',style:'text-align:center;margin-top:18px'},'Karten pro Runde: ',
+      el('select',{class:'field',style:'width:auto;min-height:36px;padding:4px 8px;display:inline-block',onchange:e=>{einst.anzahl=+e.target.value;saveEinst();}},
+        [10,20,30,50,0].map(n=>el('option',{value:n,selected:einst.anzahl===n},n?String(n):'alle'))))
+  );
+}
+
+/* ============ Auswahl ============ */
+function renderAuswahl(app){
+  const karten=alleKarten();
+  const zaehl={}, schwachZ={}, neuZ={};
+  for(const k of karten){ const s=unterSchluessel(k); zaehl[s]=(zaehl[s]||0)+1; if(istSchwach(k.id)) schwachZ[s]=(schwachZ[s]||0)+1; if(!fp(k.id)) neuZ[s]=(neuZ[s]||0)+1; }
+  let gewaehlt=new Set(einst.auswahl||Object.keys(zaehl));
+  const offen=new Set();
+  const modi=[['alle','Alle'],['neu','Nur neue'],['schwach','Nur schwache']];
+
+  function anzahlFuer(s){ return einst.modus==='schwach'?(schwachZ[s]||0):einst.modus==='neu'?(neuZ[s]||0):(zaehl[s]||0); }
+  function summe(){ let n=0; for(const s of gewaehlt) n+=anzahlFuer(s); return n; }
+
+  const baum=el('div');
+  const startBtn=el('button',{class:'btn primary'});
+  function aktualisiereStart(){
+    const n=summe(), m=(einst.anzahl&&n>einst.anzahl)?einst.anzahl:n;
+    startBtn.textContent=!n?'Keine Karten ausgewählt':(m<n?`Los geht's – ${m} von ${n} Karten (zufällig)`:`Los geht's – ${n} Karte${n===1?'':'n'}`);
+    startBtn.disabled=!n;
+  }
+  startBtn.onclick=()=>{
+    einst.auswahl=[...gewaehlt]; saveEinst();
+    const ids=karten.filter(k=>gewaehlt.has(unterSchluessel(k))).filter(k=> einst.modus==='schwach'?istSchwach(k.id): einst.modus==='neu'?!fp(k.id):true).map(k=>k.id);
+    starteSession(ids, einst.modus, einst.anzahl, 'Auswahl');
+  };
+
+  function zeichne(){
+    baum.replaceChildren();
+    for(const s of daten.skripte){
+      const sKeys=[]; s.kapitel.forEach(k=>k.unter.forEach(u=>{ const key=s.id+'|'+k.id+'|'+u.id; if(zaehl[key]) sKeys.push(key); }));
+      if(!sKeys.length) continue;
+      const sAll=sKeys.every(x=>gewaehlt.has(x)), sSome=sKeys.some(x=>gewaehlt.has(x));
+      const sCb=el('input',{type:'checkbox',checked:sAll});
+      sCb.indeterminate=!sAll&&sSome;
+      sCb.onchange=()=>{ sKeys.forEach(x=> sCb.checked?gewaehlt.add(x):gewaehlt.delete(x)); zeichne(); };
+      baum.append(el('label',{class:'chk skripthead'},sCb,el('span',{class:'t'},s.titel),el('span',{class:'n'},sKeys.reduce((a,x)=>a+anzahlFuer(x),0))));
+      const ul=el('ul',{class:'tree'});
+      for(const kap of s.kapitel){
+        const keys=kap.unter.map(u=>s.id+'|'+kap.id+'|'+u.id).filter(x=>zaehl[x]);
+        if(!keys.length) continue;
+        const all=keys.every(x=>gewaehlt.has(x)), some=keys.some(x=>gewaehlt.has(x));
+        const cb=el('input',{type:'checkbox',checked:all}); cb.indeterminate=!all&&some;
+        cb.onchange=()=>{ keys.forEach(x=> cb.checked?gewaehlt.add(x):gewaehlt.delete(x)); zeichne(); };
+        const okey=s.id+'|'+kap.id;
+        const sub=el('ul',{class:'unter',hidden:!offen.has(okey)});
+        for(const u of kap.unter){
+          const key=s.id+'|'+kap.id+'|'+u.id; if(!zaehl[key]) continue;
+          const ucb=el('input',{type:'checkbox',checked:gewaehlt.has(key)});
+          ucb.onchange=()=>{ ucb.checked?gewaehlt.add(key):gewaehlt.delete(key); zeichne(); };
+          sub.append(el('li',null,el('label',{class:'chk'},ucb,el('span',{class:'t'},u.titel),el('span',{class:'n'},anzahlFuer(key)))));
+        }
+        const tog=el('button',{class:'iconbtn','aria-label':'Unterkapitel anzeigen','aria-expanded':String(offen.has(okey)),onclick:()=>{ offen.has(okey)?offen.delete(okey):offen.add(okey); zeichne(); }},
+          el('span',{html:ICON.chev,style:`display:grid;place-items:center;transition:transform .2s;transform:rotate(${offen.has(okey)?180:0}deg)`}));
+        ul.append(el('li',{class:'k'},
+          el('div',{class:'khead'},el('label',{class:'chk'},cb,el('span',{class:'t'},kap.titel),el('span',{class:'n'},keys.reduce((a,x)=>a+anzahlFuer(x),0))),tog),
+          sub));
+      }
+      baum.append(ul);
+    }
+    aktualisiereStart();
+  }
+  const seg=el('div',{class:'seg'},modi.map(([m,t])=>el('button',{class:einst.modus===m?'on':'',onclick:e=>{ einst.modus=m; saveEinst(); seg.querySelectorAll('button').forEach(b=>b.classList.remove('on')); e.currentTarget.classList.add('on'); zeichne(); }},t)));
+  app.append(
+    kopf('Auswahl','Skripte, Kapitel und Unterkapitel antippen', zurueckBtn()),
+    seg,
+    el('div',{class:'row',style:'margin:12px 0'},
+      el('button',{class:'btn small',onclick:()=>{ gewaehlt=new Set(Object.keys(zaehl)); zeichne(); }},'Alle'),
+      el('button',{class:'btn small',onclick:()=>{ gewaehlt=new Set(); zeichne(); }},'Keine'),
+      el('button',{class:'btn small',onclick:()=>{ daten.skripte.forEach(s=>s.kapitel.forEach(k=>offen.add(s.id+'|'+k.id))); zeichne(); }},'Aufklappen')),
+    baum,
+    el('p',{class:'hint',style:'text-align:center'},'Karten pro Runde: ',
+      el('select',{class:'field',style:'width:auto;min-height:36px;padding:4px 8px;display:inline-block',onchange:e=>{einst.anzahl=+e.target.value;saveEinst();aktualisiereStart();}},
+        [10,20,30,50,0].map(n=>el('option',{value:n,selected:einst.anzahl===n},n?String(n):'alle')))),
+    el('div',{class:'sticky-bottom'},startBtn)
+  );
+  zeichne();
+}
+
+/* ============ Lernsitzung ============ */
+function starteSession(ids, modus, anzahl, titel){
+  let q=shuffle(ids.filter(id=>daten.karten[id]&&!daten.karten[id].versteckt));
+  if(!q.length){ toast('Keine passenden Karten.'); return; }
+  if(anzahl && q.length>anzahl) q=q.slice(0,anzahl);
+  session={titel, queue:q, gesamt:q.length, pos:0, richtig:0, falsch:0, wiederholt:new Set(), umgedreht:false, erledigt:0, verlauf:[]};
+  if(ansicht==='lernen') render(); else gehe('lernen');
+}
+function bewerte(gewusst){
+  const id=session.queue[session.pos];
+  const f=fort[id]||{box:0,richtig:0,falsch:0,zuletzt:0};
+  // Fortschritt nur beim ersten Durchgang einer Karte in dieser Runde werten
+  if(!session.wiederholt.has(id)){
+    if(gewusst){ f.box=Math.min((f.box||0)+1,5); f.richtig++; session.richtig++; }
+    else { f.box=1; f.falsch++; session.falsch++; }
+    f.zuletzt=Date.now(); fort[id]=f; saveFort();
+    session.verlauf.push({id,gewusst});
+  } else if(gewusst){ /* Wiederholung bestanden */ }
+  if(!gewusst){
+    // Karte später in dieser Runde nochmal zeigen
+    session.wiederholt.add(id);
+    const nochOffen=session.queue.slice(session.pos+1).filter(x=>x===id).length;
+    if(nochOffen===0){ const ziel=Math.min(session.pos+1+4, session.queue.length); session.queue.splice(ziel,0,id); }
+  }
+  session.pos++; session.umgedreht=false;
+  if(session.pos>=session.queue.length){ zeige('ergebnis'); history.replaceState({a:'ergebnis'},''); }
+  else render();
+}
+function renderLernen(app){
+  if(!session){ zeige('start'); return; }
+  const id=session.queue[session.pos], k=daten.karten[id];
+  if(!k){ session.pos++; if(session.pos>=session.queue.length) zeige('ergebnis'); else render(); return; }
+  const wiederholung=session.wiederholt.has(id) && session.queue.indexOf(id)!==session.pos;
+  const fertig=Math.min(session.pos, session.queue.length);
+  const flip=el('div',{class:'flip'+(session.umgedreht?' turned':''),role:'button',tabindex:'0','aria-label':'Karte umdrehen'},
+    el('div',{class:'face front'},
+      el('div',{class:'lbl'},'Frage'),
+      el('div',{class:'q'},k.frage),
+      el('div',{class:'tap'},'Tippen zum Umdrehen')),
+    el('div',{class:'face back'},
+      el('div',{class:'lbl'},'Antwort'),
+      el('div',{class:'qsmall'},k.frage),
+      el('div',{class:'a'},k.antwort)));
+  const drehe=()=>{ session.umgedreht=!session.umgedreht; flip.classList.toggle('turned',session.umgedreht); zeichneKnoepfe(); };
+  flip.addEventListener('click',drehe);
+  flip.addEventListener('keydown',e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); drehe(); } });
+  const knoepfe=el('div');
+  function zeichneKnoepfe(){
+    knoepfe.replaceChildren(session.umgedreht
+      ? el('div',{class:'row'},
+          el('button',{class:'btn bad',onclick:()=>bewerte(false)},'Nicht gewusst'),
+          el('button',{class:'btn ok',onclick:()=>bewerte(true)},'Gewusst'))
+      : el('button',{class:'btn primary',onclick:drehe},'Antwort zeigen'));
+  }
+  zeichneKnoepfe();
+  app.append(
+    kopf(session.titel, `Karte ${fertig+1} von ${session.queue.length}`,
+      el('button',{class:'iconbtn','aria-label':'Runde beenden',onclick:()=>{ if(session.verlauf.length){ zeige('ergebnis'); history.replaceState({a:'ergebnis'},''); } else history.back(); }},icon('close')),
+      el('button',{class:'iconbtn','aria-label':'Karte bearbeiten',onclick:()=>oeffneEditor(id,()=>render())},icon('edit'))),
+    el('div',{class:'progress'},el('i',{style:`width:${Math.round(fertig/session.queue.length*100)}%`})),
+    el('div',{class:'tags'},
+      el('span',{class:'tag'},ortText(k)),
+      k.fall?el('span',{class:'tag fall'},'Fall'):null,
+      k.eigen?el('span',{class:'tag eigen'},'Eigene Karte'):null,
+      k.bearbeitet?el('span',{class:'tag edit'},'bearbeitet'):null,
+      wiederholung?el('span',{class:'tag'},'Wiederholung'):null),
+    el('div',{class:'scene'},flip),
+    knoepfe
+  );
+}
+function renderErgebnis(app){
+  if(!session){ zeige('start'); return; }
+  const n=session.richtig+session.falsch, quote=n?Math.round(session.richtig/n*100):0;
+  const falschIds=session.verlauf.filter(v=>!v.gewusst).map(v=>v.id);
+  app.append(
+    kopf('Runde beendet', session.titel),
+    el('div',{class:'panel result'},
+      el('div',{class:'big'},quote+' %'),
+      el('div',{class:'muted'},`${session.richtig} gewusst · ${session.falsch} nicht gewusst`)),
+    el('div',{class:'stack',style:'margin-top:16px'},
+      falschIds.length?el('button',{class:'btn primary',onclick:()=>starteSession(falschIds,'schwach',0,'Fehler wiederholen')},`Nicht Gewusste wiederholen (${falschIds.length})`):null,
+      el('button',{class:'btn',onclick:()=>{ const ids=session.verlauf.map(v=>v.id); starteSession(ids,'alle',0,session.titel); }},'Gleiche Karten nochmal'),
+      el('button',{class:'btn ghost',onclick:()=>{ session=null; history.replaceState({},''); zeige('start'); }},'Zur Startseite'))
+  );
+}
+
+/* ============ Kartenliste ============ */
+function renderListe(app){
+  const sucheInp=el('input',{class:'search',type:'search',placeholder:'Suchen in Fragen und Antworten …',value:liste.suche});
+  const filterSel=el('select',{class:'field',style:'margin-top:8px'},
+    el('option',{value:''},'Alle Kapitel'),
+    daten.skripte.flatMap(s=>s.kapitel.map(k=>el('option',{value:s.id+'|'+k.id,selected:liste.filter===s.id+'|'+k.id},(daten.skripte.length>1?s.titel+' – ':'')+k.titel))),
+    el('option',{value:'*eigen',selected:liste.filter==='*eigen'},'Nur eigene Karten'),
+    el('option',{value:'*bearb',selected:liste.filter==='*bearb'},'Nur bearbeitete Karten'),
+    el('option',{value:'*schwach',selected:liste.filter==='*schwach'},'Nur schwache Karten'),
+    el('option',{value:'*versteckt',selected:liste.filter==='*versteckt'},'Ausgeblendete Karten'));
+  const ul=el('ul',{class:'list'}), info=el('p',{class:'hint'});
+  function zeichne(){
+    const s=liste.suche.trim().toLowerCase();
+    let ks=alleKarten(true);
+    if(liste.filter==='*versteckt') ks=ks.filter(k=>k.versteckt); else ks=ks.filter(k=>!k.versteckt);
+    if(liste.filter==='*eigen') ks=ks.filter(k=>k.eigen);
+    else if(liste.filter==='*bearb') ks=ks.filter(k=>k.bearbeitet);
+    else if(liste.filter==='*schwach') ks=ks.filter(k=>istSchwach(k.id));
+    else if(liste.filter && !liste.filter.startsWith('*')){ const [sid,kid]=liste.filter.split('|'); ks=ks.filter(k=>k.skript===sid&&k.kapitel===kid); }
+    if(s) ks=ks.filter(k=>(k.frage+' '+k.antwort).toLowerCase().includes(s));
+    ks.sort((a,b)=>a.id.localeCompare(b.id,'de',{numeric:true}));
+    info.textContent=`${ks.length} Karte${ks.length===1?'':'n'}`;
+    ul.replaceChildren(...ks.slice(0,300).map(k=>el('li',{class:k.versteckt?'hidden':''},
+      el('button',{onclick:()=>oeffneDetail(k.id)},
+        el('div',null,k.frage),
+        el('div',{class:'meta'},[ortText(k), k.fall?'Fall':null, k.eigen?'eigene':null, k.bearbeitet?'bearbeitet':null, istSchwach(k.id)?'schwach':null].filter(Boolean).join(' · '))))));
+    if(!ks.length) ul.append(el('li',{class:'empty',style:'border:0;background:none'},'Keine Karten gefunden.'));
+    if(ks.length>300) ul.append(el('li',{class:'empty',style:'border:0;background:none'},'Nur die ersten 300 angezeigt – bitte Suche eingrenzen.'));
+  }
+  sucheInp.oninput=()=>{ liste.suche=sucheInp.value; zeichne(); };
+  filterSel.onchange=()=>{ liste.filter=filterSel.value; zeichne(); };
+  app.append(kopf('Alle Karten',null,zurueckBtn(),el('button',{class:'iconbtn','aria-label':'Neue Karte',onclick:()=>starteNeueKarte(null)},icon('plus'))),
+    sucheInp, filterSel, info, ul);
+  zeichne();
+}
+function oeffneDetail(id){
+  const k=daten.karten[id]; if(!k) return;
+  const f=fp(id);
+  oeffneDialog(sheet=>{
+    sheet.append(
+      el('div',{class:'tags',style:'margin-top:4px'},el('span',{class:'tag'},ortText(k)),k.fall?el('span',{class:'tag fall'},'Fall'):null,k.eigen?el('span',{class:'tag eigen'},'Eigene Karte'):null,k.bearbeitet?el('span',{class:'tag edit'},'bearbeitet'):null),
+      el('div',{class:'panel'},el('div',{class:'hint'},'Frage'),el('div',{style:'font-weight:600;white-space:pre-line;margin-top:4px'},k.frage)),
+      el('div',{class:'panel',style:'margin-top:10px'},el('div',{class:'hint'},'Antwort'),el('div',{style:'white-space:pre-line;margin-top:4px'},k.antwort)),
+      el('p',{class:'hint'},f?`Geübt: ${f.richtig}× gewusst, ${f.falsch}× nicht gewusst`:'Noch nicht geübt'),
+      el('div',{class:'row'},
+        el('button',{class:'btn',onclick:()=>{ schliesseDialog(); oeffneEditor(id,()=>render()); }},icon('edit'),'Bearbeiten'),
+        el('button',{class:'btn ghost',onclick:()=>schliesseDialog()},'Schließen')));
+  });
+}
+
+/* ============ Bearbeiten / Neue Karte ============ */
+function ortAuswahl(vorgabe, onChange){
+  // Skript -> Kapitel -> Unterkapitel; plus „Eigene Karten“
+  const box=el('div');
+  let wahl={...vorgabe};
+  function sicherEigenesSkript(){
+    if(!findeSkript(EIGEN_SKRIPT)){
+      daten.skripte.push({id:EIGEN_SKRIPT,titel:'Eigene Karten',kapitel:[{id:'E',titel:'Eigene Karten',unter:[{id:'E.1',titel:'Allgemein'}]}]});
+    }
+  }
+  function zeichne(){
+    const skripte=[...daten.skripte]; if(!findeSkript(EIGEN_SKRIPT)) skripte.push({id:EIGEN_SKRIPT,titel:'Eigene Karten',kapitel:[{id:'E',titel:'Eigene Karten',unter:[{id:'E.1',titel:'Allgemein'}]}]});
+    if(!skripte.find(s=>s.id===wahl.skript)) wahl.skript=skripte[0].id;
+    const s=skripte.find(x=>x.id===wahl.skript);
+    if(!s.kapitel.find(k=>k.id===wahl.kapitel)) wahl.kapitel=s.kapitel[0].id;
+    const kap=s.kapitel.find(k=>k.id===wahl.kapitel);
+    if(!kap.unter.find(u=>u.id===wahl.unter)) wahl.unter=kap.unter[0].id;
+    const sSel=el('select',{class:'field'},skripte.map(x=>el('option',{value:x.id,selected:x.id===wahl.skript},x.titel)));
+    const kSel=el('select',{class:'field'},s.kapitel.map(x=>el('option',{value:x.id,selected:x.id===wahl.kapitel},x.titel)));
+    const uSel=el('select',{class:'field'},kap.unter.map(x=>el('option',{value:x.id,selected:x.id===wahl.unter},x.titel)));
+    sSel.onchange=()=>{ wahl.skript=sSel.value; wahl.kapitel=null; wahl.unter=null; zeichne(); };
+    kSel.onchange=()=>{ wahl.kapitel=kSel.value; wahl.unter=null; zeichne(); };
+    uSel.onchange=()=>{ wahl.unter=uSel.value; onChange(wahl); };
+    box.replaceChildren(el('label',{class:'f'},'Skript'),sSel,el('label',{class:'f'},'Kapitel'),kSel,el('label',{class:'f'},'Unterkapitel'),uSel);
+    onChange(wahl);
+  }
+  zeichne();
+  box.sicherEigenesSkript=sicherEigenesSkript;
+  return box;
+}
+function oeffneEditor(id, danach){
+  const k=daten.karten[id]; if(!k) return;
+  oeffneDialog(sheet=>{
+    const fq=el('textarea',{class:'field'}); fq.value=k.frage;
+    const fa=el('textarea',{class:'field',style:'min-height:180px'}); fa.value=k.antwort;
+    const fall=el('input',{type:'checkbox',checked:!!k.fall});
+    let ort={skript:k.skript,kapitel:k.kapitel,unter:k.unter};
+    const ortBox=ortAuswahl(ort, w=>{ ort=w; });
+    sheet.append(
+      el('h3',null,'Karte bearbeiten'),
+      k.bearbeitet&&k.original?el('p',{class:'hint',style:'margin:0'},'Diese Karte wurde schon geändert.'):null,
+      el('label',{class:'f'},'Frage (Vorderseite)'),fq,
+      el('label',{class:'f'},'Antwort (Rückseite)'),fa,
+      el('label',{class:'chk',style:'padding-left:0'},fall,el('span',{class:'t'},'Fallfrage')),
+      el('details',null,el('summary',{class:'hint',style:'cursor:pointer;padding:8px 0'},'Kapitel ändern'),ortBox),
+      el('div',{class:'row',style:'margin-top:16px'},
+        el('button',{class:'btn ghost',onclick:()=>schliesseDialog()},'Abbrechen'),
+        el('button',{class:'btn primary',onclick:()=>{
+          const q=fq.value.trim(), a=fa.value.trim();
+          if(!q||!a){ toast('Frage und Antwort dürfen nicht leer sein.'); return; }
+          if(!k.eigen && !k.original && (q!==k.frage||a!==k.antwort)) k.original={frage:k.frage,antwort:k.antwort};
+          if(!k.eigen && (q!==k.frage||a!==k.antwort)) k.bearbeitet=true;
+          k.frage=q; k.antwort=a; k.fall=fall.checked;
+          if(ort.skript===EIGEN_SKRIPT) ortBox.sicherEigenesSkript();
+          k.skript=ort.skript; k.kapitel=ort.kapitel; k.unter=ort.unter;
+          if(k.original && k.original.frage===k.frage && k.original.antwort===k.antwort){ k.bearbeitet=false; k.original=null; }
+          saveDaten(); schliesseDialog(); toast('Gespeichert'); danach&&danach();
+        }},'Speichern')),
+      el('div',{class:'stack',style:'margin-top:18px'},
+        (!k.eigen&&k.bearbeitet&&k.original)?el('button',{class:'btn small',style:'width:100%',onclick:()=>{
+          if(!confirm('Ursprüngliche Frage und Antwort wiederherstellen? Ihre Änderung geht verloren.')) return;
+          k.frage=k.original.frage; k.antwort=k.original.antwort; k.original=null; k.bearbeitet=false; saveDaten(); schliesseDialog(); toast('Original wiederhergestellt'); danach&&danach();
+        }},'Original wiederherstellen'):null,
+        k.eigen
+          ? el('button',{class:'btn small danger',style:'width:100%',onclick:()=>{
+              if(!confirm('Diese eigene Karte endgültig löschen?')) return;
+              delete daten.karten[id]; delete fort[id]; saveDaten(); saveFort(); schliesseDialog(); toast('Karte gelöscht');
+              if(session){ session.queue=session.queue.filter(x=>x!==id); if(session.pos>=session.queue.length){ zeige('ergebnis'); return; } }
+              danach&&danach();
+            }},'Karte löschen')
+          : el('button',{class:'btn small',style:'width:100%',onclick:()=>{
+              k.versteckt=!k.versteckt; saveDaten(); schliesseDialog();
+              toast(k.versteckt?'Karte ausgeblendet – unter „Alle Karten › Ausgeblendete“ wieder einblendbar':'Karte wieder eingeblendet');
+              if(k.versteckt && session){ session.queue=session.queue.filter(x=>x!==id); if(session.pos>=session.queue.length){ zeige('ergebnis'); return; } }
+              danach&&danach();
+            }},k.versteckt?'Karte wieder einblenden':'Karte ausblenden (wird nicht mehr abgefragt)'))
+    );
+  });
+}
+function starteNeueKarte(vorgabe){
+  const letzte=einst.letzterOrt||{};
+  oeffneDialog(sheet=>{
+    const fq=el('textarea',{class:'field',placeholder:'z. B. Was regelt § 19 GBO?'});
+    const fa=el('textarea',{class:'field',style:'min-height:160px',placeholder:'Antwort …'});
+    const fall=el('input',{type:'checkbox'});
+    let ort=vorgabe||letzte;
+    const ortBox=ortAuswahl(ort, w=>{ ort=w; });
+    function speichere(weiter){
+      const q=fq.value.trim(), a=fa.value.trim();
+      if(!q||!a){ toast('Bitte Frage und Antwort ausfüllen.'); return; }
+      if(ort.skript===EIGEN_SKRIPT) ortBox.sicherEigenesSkript();
+      const id='eigen-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      daten.karten[id]={id,skript:ort.skript,kapitel:ort.kapitel,unter:ort.unter,frage:q,antwort:a,fall:fall.checked,eigen:true};
+      einst.letzterOrt={...ort}; saveEinst(); saveDaten(); toast('Karte hinzugefügt');
+      if(weiter){ fq.value=''; fa.value=''; fall.checked=false; fq.focus(); }
+      else { schliesseDialog(); if(ansicht==='willkommen') zeige('start'); else render(); }
+    }
+    sheet.append(
+      el('h3',null,'Neue Karte'),
+      ortBox,
+      el('label',{class:'f'},'Frage (Vorderseite)'),fq,
+      el('label',{class:'f'},'Antwort (Rückseite)'),fa,
+      el('label',{class:'chk',style:'padding-left:0'},fall,el('span',{class:'t'},'Fallfrage')),
+      el('div',{class:'row',style:'margin-top:14px'},
+        el('button',{class:'btn ghost',onclick:()=>schliesseDialog()},'Abbrechen'),
+        el('button',{class:'btn primary',onclick:()=>speichere(false)},'Speichern')),
+      el('button',{class:'btn small',style:'width:100%;margin-top:10px',onclick:()=>speichere(true)},'Speichern & nächste Karte'));
+  });
+}
+
+/* ============ Dialog ============ */
+function oeffneDialog(fuellen){
+  const ov=$('#overlay'), sh=$('#sheet'); sh.replaceChildren(); fuellen(sauber(sh)); ov.hidden=false; sh.scrollTop=0;
+}
+function schliesseDialog(){ $('#overlay').hidden=true; }
+$('#overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') schliesseDialog(); });
+
+/* ============ Lernstand ============ */
+function renderStatistik(app){
+  const karten=alleKarten();
+  const rows=[];
+  for(const s of daten.skripte) for(const kap of s.kapitel){
+    const ks=karten.filter(k=>k.skript===s.id&&k.kapitel===kap.id); if(!ks.length) continue;
+    const sicher=ks.filter(k=>istSicher(k.id)).length, gesehen=ks.filter(k=>fp(k.id)).length, schwach=ks.filter(k=>istSchwach(k.id)).length;
+    rows.push(el('div',{class:'barrow'},
+      el('span',{class:'bt',title:kap.titel},kap.titel),
+      el('span',{class:'bb'},el('i',{style:`width:${Math.round(sicher/ks.length*100)}%`})),
+      el('span',{class:'bn'},`${sicher}/${ks.length}`)));
+    rows.push(el('div',{class:'hint',style:'margin:-4px 0 6px'},`${gesehen} geübt · ${schwach} schwach`));
+  }
+  app.append(kopf('Lernstand','Grün = sitzt sicher (3× in Folge gewusst)',zurueckBtn()),
+    el('div',{class:'panel bars'},rows.length?rows:el('p',{class:'empty'},'Noch keine Karten.')));
+}
+
+/* ============ Daten: Import / Sicherung ============ */
+function dateiWaehlen(){ const fi=$('#fileInput'); fi.value=''; fi.click(); }
+$('#fileInput').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  let obj;
+  try{ obj=JSON.parse(await f.text()); }catch(err){ toast('Die Datei konnte nicht gelesen werden.'); return; }
+  importiere(obj);
+});
+function importiere(obj){
+  if(!obj||obj.format!=='karteikarten'){ toast('Das ist keine Lernkarten-Datei.'); return; }
+  if(obj.sicherung){
+    const n=Object.keys(obj.daten&&obj.daten.karten||{}).length;
+    if(!confirm(`Sicherung vom ${new Date(obj.erstellt).toLocaleString('de-DE')} einspielen?\n\n${n} Karten inkl. Lernstand. Alles, was jetzt auf diesem Gerät ist, wird dadurch ersetzt.`)) return;
+    daten=obj.daten; fort=obj.fortschritt||{}; if(obj.einstellungen) einst=obj.einstellungen;
+    saveDaten(); saveFort(); saveEinst(); toast('Sicherung eingespielt'); persistieren(); zeige('start'); return;
+  }
+  let neu=0, aktual=0, behalten=0;
+  for(const s of obj.skripte||[]){
+    let ziel=findeSkript(s.id);
+    if(!ziel){ daten.skripte.push(JSON.parse(JSON.stringify(s))); continue; }
+    ziel.titel=s.titel;
+    for(const kap of s.kapitel){
+      let zk=ziel.kapitel.find(x=>x.id===kap.id);
+      if(!zk){ ziel.kapitel.push(JSON.parse(JSON.stringify(kap))); continue; }
+      zk.titel=kap.titel;
+      for(const u of kap.unter){ const zu=zk.unter.find(x=>x.id===u.id); if(zu) zu.titel=u.titel; else zk.unter.push({...u}); }
+    }
+  }
+  // eigenes Skript ans Ende
+  daten.skripte.sort((a,b)=>(a.id===EIGEN_SKRIPT)-(b.id===EIGEN_SKRIPT));
+  for(const k of obj.karten||[]){
+    const alt=daten.karten[k.id];
+    if(!alt){ daten.karten[k.id]={...k}; neu++; continue; }
+    if(alt.bearbeitet){ alt.original={frage:k.frage,antwort:k.antwort}; behalten++; }
+    else if(alt.frage!==k.frage||alt.antwort!==k.antwort||alt.fall!==k.fall||alt.unter!==k.unter){ Object.assign(alt,{frage:k.frage,antwort:k.antwort,fall:k.fall,kapitel:k.kapitel,unter:k.unter}); aktual++; }
+  }
+  saveDaten(); persistieren();
+  const teile=[`${neu} neue Karten`]; if(aktual) teile.push(`${aktual} aktualisiert`); if(behalten) teile.push(`${behalten} eigene Änderungen behalten`);
+  toast('Importiert: '+teile.join(', '));
+  zeige('start'); history.replaceState({},'');
+}
+function persistieren(){ try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){} }
+async function teileDatei(name, obj){
+  const text=JSON.stringify(obj,null,1);
+  const blob=new Blob([text],{type:'application/json'});
+  try{
+    const file=new File([blob],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:name}); return; }
+  }catch(e){ if(e&&e.name==='AbortError') return; }
+  const a=el('a',{href:URL.createObjectURL(blob),download:name}); document.body.append(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function datumStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function renderDaten(app){
+  const karten=alleKarten(true);
+  const eigene=karten.filter(k=>k.eigen).length, bearb=karten.filter(k=>k.bearbeitet).length;
+  app.append(kopf('Daten & Sicherung',null,zurueckBtn()),
+    el('div',{class:'panel stack'},
+      el('div',{style:'font-weight:600'},'Kartendatei importieren'),
+      el('p',{class:'hint',style:'margin:0'},'Für neue oder aktualisierte Skripte. Eigene Karten, Änderungen und der Lernstand bleiben erhalten.'),
+      el('button',{class:'btn primary',onclick:dateiWaehlen},'Datei auswählen')),
+    el('div',{class:'panel stack',style:'margin-top:12px'},
+      el('div',{style:'font-weight:600'},'Sicherung'),
+      el('p',{class:'hint',style:'margin:0'},`Alles auf diesem Gerät in einer Datei: ${karten.length} Karten (davon ${eigene} eigene, ${bearb} bearbeitet) und der Lernstand. Damit kannst du auf ein neues Handy umziehen – oder deine Änderungen weitergeben, damit sie dauerhaft in die Kartendatei einfließen.`),
+      el('button',{class:'btn',onclick:()=>teileDatei(`lernkarten-sicherung-${datumStr()}.json`,{format:'karteikarten',sicherung:true,version:1,erstellt:new Date().toISOString(),daten,fortschritt:fort,einstellungen:einst})},'Sicherung speichern / teilen'),
+      el('button',{class:'btn ghost',onclick:dateiWaehlen},'Sicherung einspielen')),
+    el('div',{class:'panel stack',style:'margin-top:12px'},
+      el('div',{style:'font-weight:600'},'Zurücksetzen'),
+      el('button',{class:'btn small',style:'width:100%',onclick:()=>{ if(confirm('Lernstand aller Karten zurücksetzen? Karten und Änderungen bleiben erhalten.')){ fort={}; saveFort(); toast('Lernstand zurückgesetzt'); render(); } }},'Nur Lernstand zurücksetzen'),
+      el('button',{class:'btn small danger',style:'width:100%',onclick:()=>{ if(confirm('Wirklich ALLES löschen – Karten, eigene Karten, Änderungen und Lernstand? Vorher am besten eine Sicherung speichern.')){ daten={skripte:[],karten:{}}; fort={}; einst={auswahl:null,modus:'alle',anzahl:20}; saveDaten(); saveFort(); saveEinst(); zeige('willkommen'); } }},'Alles löschen')),
+    el('p',{class:'hint',style:'text-align:center;margin-top:16px'},'Die Daten liegen nur auf diesem Gerät, nicht im Internet.')
+  );
+}
+
+/* ============ Start ============ */
+history.replaceState({a:'start'},'');
+render();
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+</script>
+</body>
+</html>
