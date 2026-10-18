@@ -90,6 +90,7 @@ h2{font-size:17px;margin:20px 0 8px}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:24px}
 .tag{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
 .tag.fall{background:var(--accent);color:#fff;border-color:transparent}
+.tag.wdh{background:#6d4fa3;color:#fff;border-color:transparent}
 .tag.eigen{background:var(--primary);color:var(--primary-ink);border-color:transparent}
 .tag.edit{border-style:dashed}
 .scene{perspective:1200px;margin-bottom:14px}
@@ -263,6 +264,7 @@ function renderStart(app){
     ),
     el('ul',{class:'menu'},
       el('li',null,el('button',{onclick:()=>{ liste.suche=''; gehe('liste'); }},icon('list'),el('span',null,'Alle Karten ansehen & bearbeiten',el('span',{class:'sub'},'Suchen, korrigieren, ausblenden')))),
+      el('li',null,el('button',{onclick:()=>dateiWaehlen()},icon('book'),el('span',null,'Neues Skript hinzufügen',el('span',{class:'sub'},'Kartendatei importieren – Lernstand bleibt erhalten')))),
       el('li',null,el('button',{onclick:()=>starteNeueKarte(null)},icon('plus'),el('span',null,'Neue Karte anlegen',el('span',{class:'sub'},'Eigene Frage und Antwort hinzufügen')))),
       el('li',null,el('button',{onclick:()=>gehe('statistik')},icon('target'),el('span',null,'Lernstand',el('span',{class:'sub'},'Wie gut sitzen die Kapitel?')))),
       el('li',null,el('button',{onclick:()=>gehe('daten')},icon('gear'),el('span',null,'Daten & Sicherung',el('span',{class:'sub'},'Karten importieren, sichern, übertragen'))))
@@ -278,7 +280,10 @@ function renderAuswahl(app){
   const karten=alleKarten();
   const zaehl={}, schwachZ={}, neuZ={};
   for(const k of karten){ const s=unterSchluessel(k); zaehl[s]=(zaehl[s]||0)+1; if(istSchwach(k.id)) schwachZ[s]=(schwachZ[s]||0)+1; if(!fp(k.id)) neuZ[s]=(neuZ[s]||0)+1; }
+  // Neu hinzugekommene Skripte/Kapitel sind automatisch ausgewählt
   let gewaehlt=new Set(einst.auswahl||Object.keys(zaehl));
+  if(einst.auswahl && einst.bekannt){ const bek=new Set(einst.bekannt); Object.keys(zaehl).forEach(k=>{ if(!bek.has(k)) gewaehlt.add(k); }); }
+  else if(einst.auswahl){ const alteSkripte=new Set(einst.auswahl.map(k=>k.split('|')[0])); Object.keys(zaehl).forEach(k=>{ if(!alteSkripte.has(k.split('|')[0])) gewaehlt.add(k); }); }
   const offen=new Set();
   const modi=[['alle','Alle'],['neu','Nur neue'],['schwach','Nur schwache']];
 
@@ -293,7 +298,7 @@ function renderAuswahl(app){
     startBtn.disabled=!n;
   }
   startBtn.onclick=()=>{
-    einst.auswahl=[...gewaehlt]; saveEinst();
+    einst.auswahl=[...gewaehlt]; einst.bekannt=Object.keys(zaehl); saveEinst();
     const ids=karten.filter(k=>gewaehlt.has(unterSchluessel(k))).filter(k=> einst.modus==='schwach'?istSchwach(k.id): einst.modus==='neu'?!fp(k.id):true).map(k=>k.id);
     starteSession(ids, einst.modus, einst.anzahl, 'Auswahl');
   };
@@ -368,11 +373,10 @@ function bewerte(gewusst){
     f.zuletzt=Date.now(); fort[id]=f; saveFort();
     session.verlauf.push({id,gewusst});
   } else if(gewusst){ /* Wiederholung bestanden */ }
-  if(!gewusst){
-    // Karte später in dieser Runde nochmal zeigen
+  if(!gewusst && !session.wiederholt.has(id)){
+    // Karte höchstens EINMAL später in dieser Runde wiederholen
     session.wiederholt.add(id);
-    const nochOffen=session.queue.slice(session.pos+1).filter(x=>x===id).length;
-    if(nochOffen===0){ const ziel=Math.min(session.pos+1+4, session.queue.length); session.queue.splice(ziel,0,id); }
+    const ziel=Math.min(session.pos+1+4, session.queue.length); session.queue.splice(ziel,0,id);
   }
   session.pos++; session.umgedreht=false;
   if(session.pos>=session.queue.length){ zeige('ergebnis'); history.replaceState({a:'ergebnis'},''); }
@@ -415,7 +419,7 @@ function renderLernen(app){
       k.fall?el('span',{class:'tag fall'},'Fall'):null,
       k.eigen?el('span',{class:'tag eigen'},'Eigene Karte'):null,
       k.bearbeitet?el('span',{class:'tag edit'},'bearbeitet'):null,
-      wiederholung?el('span',{class:'tag'},'Wiederholung'):null),
+      wiederholung?el('span',{class:'tag wdh'},'↻ Wiederholung'):null),
     el('div',{class:'scene'},flip),
     knoepfe
   );
