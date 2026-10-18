@@ -79,7 +79,9 @@ h2{font-size:17px;margin:20px 0 8px}
 .chk .t{flex:1}
 .chk .n{font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .unter .chk{padding-left:22px}
-.skripthead{font-weight:700;margin:16px 0 8px}
+.skripthead{font-weight:700}
+.sbox{display:flex;align-items:center;gap:4px;margin:12px 0 8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:2px 6px 2px 4px}
+.sbox label{flex:1}
 .seg{display:flex;background:var(--line);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:transparent;border-radius:10px;padding:10px 6px;font-size:14px;cursor:pointer;min-height:44px}
 .seg button.on{background:var(--surface);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
@@ -285,6 +287,9 @@ function renderAuswahl(app){
   if(einst.auswahl && einst.bekannt){ const bek=new Set(einst.bekannt); Object.keys(zaehl).forEach(k=>{ if(!bek.has(k)) gewaehlt.add(k); }); }
   else if(einst.auswahl){ const alteSkripte=new Set(einst.auswahl.map(k=>k.split('|')[0])); Object.keys(zaehl).forEach(k=>{ if(!alteSkripte.has(k.split('|')[0])) gewaehlt.add(k); }); }
   const offen=new Set();
+  // Skripte: eingeklappt merken (Standard: eingeklappt)
+  const skriptOffen=new Set(einst.skriptOffen||[]);
+  function merkeSkripte(){ einst.skriptOffen=[...skriptOffen]; saveEinst(); }
   const modi=[['alle','Alle'],['neu','Nur neue'],['schwach','Nur schwache']];
 
   function anzahlFuer(s){ return einst.modus==='schwach'?(schwachZ[s]||0):einst.modus==='neu'?(neuZ[s]||0):(zaehl[s]||0); }
@@ -312,7 +317,10 @@ function renderAuswahl(app){
       const sCb=el('input',{type:'checkbox',checked:sAll});
       sCb.indeterminate=!sAll&&sSome;
       sCb.onchange=()=>{ sKeys.forEach(x=> sCb.checked?gewaehlt.add(x):gewaehlt.delete(x)); zeichne(); };
-      baum.append(el('label',{class:'chk skripthead'},sCb,el('span',{class:'t'},s.titel),el('span',{class:'n'},sKeys.reduce((a,x)=>a+anzahlFuer(x),0))));
+      const sOffen=skriptOffen.has(s.id);
+      const sTog=el('button',{class:'iconbtn','aria-label':sOffen?'Kapitel einklappen':'Kapitel anzeigen','aria-expanded':String(sOffen),onclick:()=>{ sOffen?skriptOffen.delete(s.id):skriptOffen.add(s.id); merkeSkripte(); zeichne(); }},
+        el('span',{html:ICON.chev,style:`display:grid;place-items:center;transition:transform .2s;transform:rotate(${sOffen?180:0}deg)`}));
+      baum.append(el('div',{class:'sbox'},el('label',{class:'chk skripthead'},sCb,el('span',{class:'t'},s.titel),el('span',{class:'n'},sKeys.reduce((a,x)=>a+anzahlFuer(x),0))),sTog));
       const ul=el('ul',{class:'tree'});
       for(const kap of s.kapitel){
         const keys=kap.unter.map(u=>s.id+'|'+kap.id+'|'+u.id).filter(x=>zaehl[x]);
@@ -334,7 +342,7 @@ function renderAuswahl(app){
           el('div',{class:'khead'},el('label',{class:'chk'},cb,el('span',{class:'t'},kap.titel),el('span',{class:'n'},keys.reduce((a,x)=>a+anzahlFuer(x),0))),tog),
           sub));
       }
-      baum.append(ul);
+      if(sOffen) baum.append(ul);
     }
     aktualisiereStart();
   }
@@ -345,7 +353,7 @@ function renderAuswahl(app){
     el('div',{class:'row',style:'margin:12px 0'},
       el('button',{class:'btn small',onclick:()=>{ gewaehlt=new Set(Object.keys(zaehl)); zeichne(); }},'Alle'),
       el('button',{class:'btn small',onclick:()=>{ gewaehlt=new Set(); zeichne(); }},'Keine'),
-      el('button',{class:'btn small',onclick:()=>{ daten.skripte.forEach(s=>s.kapitel.forEach(k=>offen.add(s.id+'|'+k.id))); zeichne(); }},'Aufklappen')),
+      el('button',{class:'btn small',onclick:()=>{ const zu=daten.skripte.every(s=>skriptOffen.has(s.id)); daten.skripte.forEach(s=>zu?skriptOffen.delete(s.id):skriptOffen.add(s.id)); merkeSkripte(); zeichne(); }},'Skripte auf/zu')),
     baum,
     el('p',{class:'hint',style:'text-align:center'},'Karten pro Runde: ',
       el('select',{class:'field',style:'width:auto;min-height:36px;padding:4px 8px;display:inline-block',onchange:e=>{einst.anzahl=+e.target.value;saveEinst();aktualisiereStart();}},
@@ -653,7 +661,7 @@ function importiere(obj){
     }
   }
   // eigenes Skript ans Ende
-  daten.skripte.sort((a,b)=>(a.id===EIGEN_SKRIPT)-(b.id===EIGEN_SKRIPT));
+  daten.skripte.sort((a,b)=>((a.id===EIGEN_SKRIPT)-(b.id===EIGEN_SKRIPT)) || a.titel.localeCompare(b.titel,'de',{numeric:true}));
   for(const k of obj.karten||[]){
     const alt=daten.karten[k.id];
     if(!alt){ daten.karten[k.id]={...k}; neu++; continue; }
