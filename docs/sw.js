@@ -1,5 +1,5 @@
 // Offline-Cache für die Lernkarten-App. Bei Änderungen an der App VERSION erhöhen.
-const VERSION = 'lernkarten-v3';
+const VERSION = 'lernkarten-v4';
 const DATEIEN = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(DATEIEN)).then(() => self.skipWaiting()));

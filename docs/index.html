@@ -55,7 +55,9 @@ header.bar h1 small{display:block;font-size:13px;font-weight:400;color:var(--mut
 .stack>*+*{margin-top:10px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center;font:inherit;color:inherit;cursor:pointer;width:100%}
+.stat:active{background:var(--line)}
+.stat em{display:block;font-style:normal;font-size:11px;color:var(--primary);margin-top:2px}
 .stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
 .stat span{font-size:12px;color:var(--muted)}
 .menu{list-style:none;margin:16px 0 0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
@@ -255,9 +257,9 @@ function renderStart(app){
   app.append(
     kopf('Lernkarten', daten.skripte.map(s=>s.titel).join(' · ')),
     el('div',{class:'stats'},
-      el('div',{class:'stat'},el('b',null,karten.length),el('span',null,'Karten')),
-      el('div',{class:'stat'},el('b',null,gesehen),el('span',null,'schon geübt')),
-      el('div',{class:'stat'},el('b',null,sicher),el('span',null,'sitzen sicher'))),
+      el('button',{class:'stat',onclick:()=>zeigeListe('')},el('b',null,karten.length),el('span',null,'Karten'),el('em',null,'ansehen ›')),
+      el('button',{class:'stat',onclick:()=>zeigeListe('*geuebt')},el('b',null,gesehen),el('span',null,'schon geübt'),el('em',null,'ansehen ›')),
+      el('button',{class:'stat',onclick:()=>zeigeListe('*sicher')},el('b',null,sicher),el('span',null,'sitzen sicher'),el('em',null,'ansehen ›'))),
     el('div',{class:'stack'},
       el('button',{class:'btn primary',onclick:()=>starteSession(karten.map(k=>k.id),'alle',einst.anzahl,'Zufall querbeet')},icon('shuffle'),'Zufall querbeet'),
       el('button',{class:'btn',onclick:()=>gehe('auswahl')},icon('book'),'Skripte & Kapitel auswählen'),
@@ -265,7 +267,7 @@ function renderStart(app){
         schwach?`Schwachstellen üben (${schwach})`:'Schwachstellen üben – noch keine')
     ),
     el('ul',{class:'menu'},
-      el('li',null,el('button',{onclick:()=>{ liste.suche=''; gehe('liste'); }},icon('list'),el('span',null,'Alle Karten ansehen & bearbeiten',el('span',{class:'sub'},'Suchen, korrigieren, ausblenden')))),
+      el('li',null,el('button',{onclick:()=>zeigeListe('')},icon('list'),el('span',null,'Alle Karten ansehen & bearbeiten',el('span',{class:'sub'},'Suchen, korrigieren, ausblenden')))),
       el('li',null,el('button',{onclick:()=>dateiWaehlen()},icon('book'),el('span',null,'Neues Skript hinzufügen',el('span',{class:'sub'},'Kartendatei importieren – Lernstand bleibt erhalten')))),
       el('li',null,el('button',{onclick:()=>starteNeueKarte(null)},icon('plus'),el('span',null,'Neue Karte anlegen',el('span',{class:'sub'},'Eigene Frage und Antwort hinzufügen')))),
       el('li',null,el('button',{onclick:()=>gehe('statistik')},icon('target'),el('span',null,'Lernstand',el('span',{class:'sub'},'Wie gut sitzen die Kapitel?')))),
@@ -456,6 +458,8 @@ function renderListe(app){
     daten.skripte.flatMap(s=>s.kapitel.map(k=>el('option',{value:s.id+'|'+k.id,selected:liste.filter===s.id+'|'+k.id},(daten.skripte.length>1?s.titel+' – ':'')+k.titel))),
     el('option',{value:'*eigen',selected:liste.filter==='*eigen'},'Nur eigene Karten'),
     el('option',{value:'*bearb',selected:liste.filter==='*bearb'},'Nur bearbeitete Karten'),
+    el('option',{value:'*sicher',selected:liste.filter==='*sicher'},'Nur sicher sitzende Karten'),
+    el('option',{value:'*geuebt',selected:liste.filter==='*geuebt'},'Nur schon geübte Karten'),
     el('option',{value:'*schwach',selected:liste.filter==='*schwach'},'Nur schwache Karten'),
     el('option',{value:'*versteckt',selected:liste.filter==='*versteckt'},'Ausgeblendete Karten'));
   const ul=el('ul',{class:'list'}), info=el('p',{class:'hint'});
@@ -466,6 +470,8 @@ function renderListe(app){
     if(liste.filter==='*eigen') ks=ks.filter(k=>k.eigen);
     else if(liste.filter==='*bearb') ks=ks.filter(k=>k.bearbeitet);
     else if(liste.filter==='*schwach') ks=ks.filter(k=>istSchwach(k.id));
+    else if(liste.filter==='*sicher') ks=ks.filter(k=>istSicher(k.id));
+    else if(liste.filter==='*geuebt') ks=ks.filter(k=>fp(k.id));
     else if(liste.filter && !liste.filter.startsWith('*')){ const [sid,kid]=liste.filter.split('|'); ks=ks.filter(k=>k.skript===sid&&k.kapitel===kid); }
     if(s) ks=ks.filter(k=>(k.frage+' '+k.antwort).toLowerCase().includes(s));
     ks.sort((a,b)=>a.id.localeCompare(b.id,'de',{numeric:true}));
@@ -473,16 +479,17 @@ function renderListe(app){
     ul.replaceChildren(...ks.slice(0,300).map(k=>el('li',{class:k.versteckt?'hidden':''},
       el('button',{onclick:()=>oeffneDetail(k.id)},
         el('div',null,k.frage),
-        el('div',{class:'meta'},[ortText(k), k.fall?'Fall':null, k.eigen?'eigene':null, k.bearbeitet?'bearbeitet':null, istSchwach(k.id)?'schwach':null].filter(Boolean).join(' · '))))));
+        el('div',{class:'meta'},[ortText(k), k.fall?'Fall':null, k.eigen?'eigene':null, k.bearbeitet?'bearbeitet':null, istSchwach(k.id)?'schwach':null, istSicher(k.id)?'sitzt sicher ✓':null].filter(Boolean).join(' · '))))));
     if(!ks.length) ul.append(el('li',{class:'empty',style:'border:0;background:none'},'Keine Karten gefunden.'));
     if(ks.length>300) ul.append(el('li',{class:'empty',style:'border:0;background:none'},'Nur die ersten 300 angezeigt – bitte Suche eingrenzen.'));
   }
   sucheInp.oninput=()=>{ liste.suche=sucheInp.value; zeichne(); };
   filterSel.onchange=()=>{ liste.filter=filterSel.value; zeichne(); };
-  app.append(kopf('Alle Karten',null,zurueckBtn(),el('button',{class:'iconbtn','aria-label':'Neue Karte',onclick:()=>starteNeueKarte(null)},icon('plus'))),
+  app.append(kopf(({'*sicher':'Sitzen sicher','*geuebt':'Schon geübt','*schwach':'Schwache Karten'})[liste.filter]||'Alle Karten',null,zurueckBtn(),el('button',{class:'iconbtn','aria-label':'Neue Karte',onclick:()=>starteNeueKarte(null)},icon('plus'))),
     sucheInp, filterSel, info, ul);
   zeichne();
 }
+function zeigeListe(filter){ liste.suche=''; liste.filter=filter; gehe('liste'); }
 function oeffneDetail(id){
   const k=daten.karten[id]; if(!k) return;
   const f=fp(id);
